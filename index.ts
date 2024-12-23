@@ -1,16 +1,17 @@
 import { Page, chromium } from 'playwright'
-
 import * as looksSame from 'looks-same'
+import * as readline from 'readline'
+import * as fs from 'fs'
 
 const DELAY_TIME = 3000
 const SCREENSHOTS = [
   {
-    url: 'https://dev-fc-a-site.mekong-dev.com/',
-    folderName: 'dev-fc-a-site',
+    url: 'https://localhost:5173/',
+    folderName: 'local',
   },
   {
-    url: 'https://dev-fc-b-site.halong-dev.com/',
-    folderName: 'dev-fc-b-site',
+    url: 'https://nfc.predev2.sheeta-dev.com/',
+    folderName: 'pre-dev2',
   },
 ]
 
@@ -43,9 +44,7 @@ const readyForPage = async (page: Page) => {
 
   await scrollToBottom(page)
 
-  await page.waitForFunction(imagesHaveLoaded, {
-    timeout: DELAY_TIME,
-  })
+  await page.waitForFunction(imagesHaveLoaded)
 
   await page.waitForTimeout(DELAY_TIME)
 }
@@ -73,11 +72,30 @@ const screenshotPageByUrl = async (
 
     await readyForPage(page)
 
-    await page.setViewportSize({ width: 1920, height: 1200 })
-    await page.screenshot({
-      path: `screenshots/${folderName}/screenshot_${fileName}`,
-      fullPage: true,
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
     })
+    const askQuestion = async (question: string): Promise<string> => {
+      return new Promise((resolve) => {
+        rl.question(question, (answer) => {
+          resolve(answer)
+        })
+      })
+    }
+
+    const answer = await askQuestion(
+      'Do you want to screenshot this page? (y/n): '
+    )
+    if (answer.toLowerCase() === 'y') {
+      await page.setViewportSize({ width: 1920, height: 1200 })
+      await page.screenshot({
+        path: `screenshots/${folderName}/screenshot_${fileName}`,
+        fullPage: true,
+      })
+    }
+
+    rl.close()
   } catch (error) {
     console.error(error)
   } finally {
@@ -95,6 +113,14 @@ const compareImages = async (
   path2: string,
   fileName: string
 ) => {
+  if (!fs.existsSync('diff')) {
+    fs.mkdirSync('diff')
+  }
+
+  if (!fs.existsSync('screenshots')) {
+    fs.mkdirSync('screenshots')
+  }
+
   const { equal, diffImage } = await looksSame(
     `screenshots/${path1}`,
     `screenshots/${path2}`,

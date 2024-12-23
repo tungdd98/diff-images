@@ -38,15 +38,17 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 Object.defineProperty(exports, "__esModule", { value: true });
 var playwright_1 = require("playwright");
 var looksSame = require("looks-same");
+var readline = require("readline");
+var fs = require("fs");
 var DELAY_TIME = 3000;
 var SCREENSHOTS = [
     {
-        url: 'https://dev-fc-a-site.mekong-dev.com/',
-        folderName: 'dev-fc-a-site',
+        url: 'https://localhost:5173/',
+        folderName: 'local',
     },
     {
-        url: 'https://dev-fc-b-site.halong-dev.com/',
-        folderName: 'dev-fc-b-site',
+        url: 'https://nfc.predev2.sheeta-dev.com/',
+        folderName: 'pre-dev2',
     },
 ];
 /**
@@ -90,9 +92,7 @@ var readyForPage = function (page) { return __awaiter(void 0, void 0, void 0, fu
             case 5: return [4 /*yield*/, scrollToBottom(page)];
             case 6:
                 _a.sent();
-                return [4 /*yield*/, page.waitForFunction(imagesHaveLoaded, {
-                        timeout: DELAY_TIME,
-                    })];
+                return [4 /*yield*/, page.waitForFunction(imagesHaveLoaded)];
             case 7:
                 _a.sent();
                 return [4 /*yield*/, page.waitForTimeout(DELAY_TIME)];
@@ -107,7 +107,7 @@ var readyForPage = function (page) { return __awaiter(void 0, void 0, void 0, fu
  * Saves the screenshot with a timestamp in the filename.
  */
 var screenshotPageByUrl = function (url, folderName, fileName) { return __awaiter(void 0, void 0, void 0, function () {
-    var browser, context, page, error_1;
+    var browser, context, page, rl_1, askQuestion, answer, error_1;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0: return [4 /*yield*/, playwright_1.chromium.launch({
@@ -124,7 +124,7 @@ var screenshotPageByUrl = function (url, folderName, fileName) { return __awaite
                 page = _a.sent();
                 _a.label = 4;
             case 4:
-                _a.trys.push([4, 9, 10, 12]);
+                _a.trys.push([4, 11, 12, 14]);
                 return [4 /*yield*/, page.goto(url, {
                         waitUntil: 'networkidle',
                     })];
@@ -133,25 +133,45 @@ var screenshotPageByUrl = function (url, folderName, fileName) { return __awaite
                 return [4 /*yield*/, readyForPage(page)];
             case 6:
                 _a.sent();
-                return [4 /*yield*/, page.setViewportSize({ width: 1920, height: 1200 })];
+                rl_1 = readline.createInterface({
+                    input: process.stdin,
+                    output: process.stdout,
+                });
+                askQuestion = function (question) { return __awaiter(void 0, void 0, void 0, function () {
+                    return __generator(this, function (_a) {
+                        return [2 /*return*/, new Promise(function (resolve) {
+                                rl_1.question(question, function (answer) {
+                                    resolve(answer);
+                                });
+                            })];
+                    });
+                }); };
+                return [4 /*yield*/, askQuestion('Do you want to screenshot this page? (y/n): ')];
             case 7:
+                answer = _a.sent();
+                if (!(answer.toLowerCase() === 'y')) return [3 /*break*/, 10];
+                return [4 /*yield*/, page.setViewportSize({ width: 1920, height: 1200 })];
+            case 8:
                 _a.sent();
                 return [4 /*yield*/, page.screenshot({
                         path: "screenshots/".concat(folderName, "/screenshot_").concat(fileName),
                         fullPage: true,
                     })];
-            case 8:
-                _a.sent();
-                return [3 /*break*/, 12];
             case 9:
+                _a.sent();
+                _a.label = 10;
+            case 10:
+                rl_1.close();
+                return [3 /*break*/, 14];
+            case 11:
                 error_1 = _a.sent();
                 console.error(error_1);
-                return [3 /*break*/, 12];
-            case 10: return [4 /*yield*/, browser.close()];
-            case 11:
+                return [3 /*break*/, 14];
+            case 12: return [4 /*yield*/, browser.close()];
+            case 13:
                 _a.sent();
                 return [7 /*endfinally*/];
-            case 12: return [2 /*return*/];
+            case 14: return [2 /*return*/];
         }
     });
 }); };
@@ -163,7 +183,14 @@ var compareImages = function (path1, path2, fileName) { return __awaiter(void 0,
     var _a, equal, diffImage;
     return __generator(this, function (_b) {
         switch (_b.label) {
-            case 0: return [4 /*yield*/, looksSame("screenshots/".concat(path1), "screenshots/".concat(path2), { createDiffImage: true })];
+            case 0:
+                if (!fs.existsSync('diff')) {
+                    fs.mkdirSync('diff');
+                }
+                if (!fs.existsSync('screenshots')) {
+                    fs.mkdirSync('screenshots');
+                }
+                return [4 /*yield*/, looksSame("screenshots/".concat(path1), "screenshots/".concat(path2), { createDiffImage: true })];
             case 1:
                 _a = _b.sent(), equal = _a.equal, diffImage = _a.diffImage;
                 if (!(!equal && diffImage)) return [3 /*break*/, 3];
